@@ -9,9 +9,16 @@
 #import "detailCollectionViewCell.h"
 
 
+@interface  detailCollectionViewCell ()
 
+@end
 
 @implementation detailCollectionViewCell
+
+
+
+
+
 
 
 @end

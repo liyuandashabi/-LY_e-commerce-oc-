@@ -7,6 +7,11 @@
 //
 
 #import <UIKit/UIKit.h>
+#import "XRCarouselView.h"
+
 
 @interface MainViewController : UIViewController
+
+
+
 @end

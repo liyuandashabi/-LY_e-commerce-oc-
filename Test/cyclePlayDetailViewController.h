@@ -10,4 +10,9 @@
 
 @interface cyclePlayDetailViewController : UIViewController
 
+
+@property (nonatomic) NSInteger picNumber;
+
+
+
 @end

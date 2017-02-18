@@ -11,18 +11,22 @@
 #import "MJRefresh.h"
 #import "activityViewController.h"
 #import "cyclePlayDetailViewController.h"
-#import "LYCollectionViewLayout.h"
+#import "detailCollectionViewCell.h"
+#import "productsDetailViewController.h"
 
 #define LYColor(r, g, b) [UIColor colorWithRed:(r)/255.0 green:(g)/255.0 blue:(b)/255.0 alpha:1.0]
 #define LYRandomColor LYColor(arc4random_uniform(255), arc4random_uniform(255), arc4random_uniform(255))
 
-@interface MainViewController () <XRCarouselViewDelegate,UICollectionViewDelegate,UICollectionViewDataSource,LYCollectionViewLayoutDelegate>
+@interface MainViewController () <XRCarouselViewDelegate,UICollectionViewDelegate,UICollectionViewDataSource>
 
 @property (weak, nonatomic) IBOutlet XRCarouselView *picView;
 
+//活动按钮
 @property (weak, nonatomic) IBOutlet UIButton *changeToActivityBtn;
-
+//
 @property (weak, nonatomic) IBOutlet UICollectionView *LYCollectionView;
+
+@property (strong,nonatomic) NSMutableArray *arr;
 
 @end
 
@@ -36,48 +40,11 @@ static NSString *const LYShopId=@"shop";
     
     [self changeToActivityBtnSetting];
     
-    [self collectionInitSetting];
-    
     [self setuoRefresh];
-}
-
-#pragma mark - ActivitySkip
--(void)changeToActivityBtnSetting {
     
-    [self.changeToActivityBtn addTarget:self action:@selector(skip:) forControlEvents:UIControlEventTouchUpInside];
+    [self collectionCellSetting];
+    
 }
-
--(void)skip:(UIButton *)sender {
-    UIStoryboard *storyboard=self.storyboard;
-    activityViewController *activityVC=[storyboard instantiateViewControllerWithIdentifier:@"aVC"];
-    activityVC.modalTransitionStyle=UIModalTransitionStyleCrossDissolve;
-    [self presentViewController:activityVC animated:YES completion:nil];
-}
-
-#pragma mark - 刷新加载
--(void)setuoRefresh {
-    self.LYCollectionView.mj_header=[MJRefreshNormalHeader headerWithRefreshingTarget:self refreshingAction:@selector(sendRequest)];
-    [self.LYCollectionView.mj_header beginRefreshing];
-
-    self.LYCollectionView.mj_footer=[MJRefreshAutoNormalFooter footerWithRefreshingTarget:self refreshingAction:@selector(loadMore)];
-    self.LYCollectionView.mj_footer.hidden = YES;
-}
-
--(void)sendRequest {
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.0 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-        
-        [self.LYCollectionView.mj_header endRefreshing];
-    });
-
-}
-
--(void)loadMore {
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.0 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-        
-        [self.LYCollectionView.mj_footer endRefreshing];
-    });
-}
-
 #pragma mark - 设置轮播图
 -(void)cyclePlayPic {
     
@@ -108,66 +75,118 @@ static NSString *const LYShopId=@"shop";
         UIStoryboard *storyboard=self.storyboard;
         cyclePlayDetailViewController *cPDVC=[storyboard instantiateViewControllerWithIdentifier:@"CPDVC_1"];
         cPDVC.modalTransitionStyle=UIModalTransitionStyleCrossDissolve;
+        //草泥马这一步坑的我好惨啊！要在跳转之前赋值！
+        cPDVC.picNumber=index;
+        NSLog(@"现在点击了的是：%ld",cPDVC.picNumber);
         [self presentViewController:cPDVC animated:YES completion:nil];
     };
+   
 }
 
-#pragma mark - collectionSetting
--(void)collectionInitSetting {
-    LYCollectionViewLayout *LYLayout=[[LYCollectionViewLayout alloc]init];
-    LYLayout.delegate=self;
+#pragma mark - ActivitySkip
+-(void)changeToActivityBtnSetting {
     
-    self.LYCollectionView.collectionViewLayout=LYLayout;
-    [self.LYCollectionView registerClass:[UICollectionViewCell class] forCellWithReuseIdentifier:LYShopId];
-    
+    [self.changeToActivityBtn addTarget:self action:@selector(skip:) forControlEvents:UIControlEventTouchUpInside];
+}
+
+-(void)skip:(UIButton *)sender {
+    UIStoryboard *storyboard=self.storyboard;
+    activityViewController *activityVC=[storyboard instantiateViewControllerWithIdentifier:@"aVC"];
+    activityVC.modalTransitionStyle=UIModalTransitionStyleCrossDissolve;
+    [self presentViewController:activityVC animated:YES completion:nil];
+}
+
+#pragma mark - 上拉刷新加载
+-(void)setuoRefresh {
+    self.LYCollectionView.mj_header=[MJRefreshNormalHeader headerWithRefreshingTarget:self refreshingAction:@selector(sendRequest)];
+    [self.LYCollectionView.mj_header beginRefreshing];
+
+    self.LYCollectionView.mj_footer=[MJRefreshAutoNormalFooter footerWithRefreshingTarget:self refreshingAction:@selector(loadMore)];
+    self.LYCollectionView.mj_footer.hidden = YES;
+}
+
+-(void)sendRequest {
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.0 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        
+        [self.LYCollectionView.mj_header endRefreshing];
+    });
 
 }
 
--(NSInteger)collectionView:(UICollectionView *)collectionView numberOfItemsInSection:(NSInteger)section {
-    
-    return 50;
-    
+-(void)loadMore {
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.0 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        
+        [self.LYCollectionView.mj_footer endRefreshing];
+    });
 }
 
--(UICollectionViewCell *)collectionView:(UICollectionView *)collectionView cellForItemAtIndexPath:(NSIndexPath *)indexPath {
+#pragma mark - CollectionSetting
+-(void)collectionCellSetting {
+    self.arr=[[NSMutableArray alloc]initWithCapacity:5];
     
-    UICollectionViewCell *cell=[collectionView dequeueReusableCellWithReuseIdentifier:LYShopId forIndexPath:indexPath ];
-    cell.backgroundColor=LYRandomColor;
-    
-    NSInteger tag = 10;
-    UILabel *label = (UILabel *)[cell.contentView viewWithTag:tag];
-    if (label == nil) {
-        label = [[UILabel alloc] init];
-        label.tag = tag;
-        [cell.contentView addSubview:label];
+    for (int i=0; i<5 ; i++) {
+        [self.arr addObject:[UIImage imageNamed:[NSString stringWithFormat:@"detail_%d.jpg",i+1]]];
     }
     
-    label.text = [NSString stringWithFormat:@"%zd", indexPath.item];
-    [label sizeToFit];
+    [self.LYCollectionView registerClass:[UICollectionReusableView class] forSupplementaryViewOfKind:UICollectionElementKindSectionHeader withReuseIdentifier:@"Reusable"];
+}
+
+
+#pragma mark - UICollectionViewDataSource
+- (NSInteger)collectionView:(UICollectionView *)collectionView numberOfItemsInSection:(NSInteger)section{
+    return self.arr.count;
+}
+
+- (UICollectionViewCell *)collectionView:(UICollectionView *)collectionView cellForItemAtIndexPath:(NSIndexPath *)indexPath{
     
+     detailCollectionViewCell *cell= [collectionView dequeueReusableCellWithReuseIdentifier:LYShopId forIndexPath:indexPath];
+    cell.detailImage.image = [self.arr objectAtIndex:indexPath.row];
     return cell;
 }
 
-#pragma mark - layoutDelegate
--(CGFloat)LYViewLayout:(LYCollectionViewLayout *)LYViewLayout heightForItemAtIndex:(NSUInteger)index itemWidth:(CGFloat)itemWidth {
-    return 100 + arc4random_uniform(150);
+#pragma mark - 点击row事件
+
+- (void)collectionView:(UICollectionView *)collectionView didSelectItemAtIndexPath:(NSIndexPath *)indexPath{
+    
+    //NSLog(@"第%ld个section，第%ld个cell被点击了",(long)indexPath.section,(long)indexPath.row);
+    
+    UIStoryboard *storyboard=self.storyboard;
+    
+    productsDetailViewController *productsDetailVC=[storyboard instantiateViewControllerWithIdentifier:@"proDetail"];
+    
+    productsDetailVC.modalTransitionStyle=UIModalTransitionStyleCrossDissolve;
+    
+    switch (indexPath.row) {
+        case 0:
+            productsDetailVC.index=indexPath.row;
+            break;
+        case 1:
+            productsDetailVC.index=indexPath.row;
+            break;
+        case 2:
+             productsDetailVC.index=indexPath.row;
+            break;
+        case 3:
+             productsDetailVC.index=indexPath.row;
+            break;
+        case 4:
+             productsDetailVC.index=indexPath.row;
+            break;
+    }
+    [self presentViewController:productsDetailVC animated:YES completion:^{
+        productsDetailVC.index=indexPath.row;
+    }];
 }
 
--(CGFloat)rowMarginInViewLayout:(LYCollectionViewLayout *)ViewLayout {
+#pragma mark - UICollectionViewDelegateFlowLayout
+- (CGSize)collectionView:(UICollectionView *)collectionView layout:(UICollectionViewLayout*)collectionViewLayout sizeForItemAtIndexPath:(NSIndexPath *)indexPath{
+    return CGSizeMake(self.LYCollectionView.frame.size.width, self.LYCollectionView.frame.size.height/1.5);
+}
+
+- (CGFloat)collectionView:(UICollectionView *)collectionView layout:(UICollectionViewLayout*)collectionViewLayout minimumLineSpacingForSectionAtIndex:(NSInteger)section{
     return 5;
 }
 
--(CGFloat)columnMarginInInViewLayout:(LYCollectionViewLayout *)ViewLayout {
-    return 5;
-}
-
--(CGFloat)columnCountInViewLayout:(LYCollectionViewLayout *)ViewLayout {
-    return 2;
-}
-
--(UIEdgeInsets)edgeInsetsInViewLayout:(LYCollectionViewLayout *)ViewLayout {
-    return UIEdgeInsetsMake(2, 2, 2, 2);
-}
 
 - (void)didReceiveMemoryWarning {
     [super didReceiveMemoryWarning];
